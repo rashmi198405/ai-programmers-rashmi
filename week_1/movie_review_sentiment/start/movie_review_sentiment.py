@@ -1,4 +1,8 @@
 from openai import OpenAI
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Initialize OpenAI client
 client = OpenAI()
@@ -14,8 +18,19 @@ def analyze_sentiment(review):
     #       thought: [analysis]
     #       sentiment: [positive/negative]
     # 3. Includes the review text
-    prompt = """
-    # TODO: Add your prompt here
+    prompt = f"""
+    You are a sentiment analysis expert. Analyze the sentiment of the following movie review.
+    
+    Instructions:
+    - Provide a brief analysis of the reviewer's opinion and reasoning
+    - Determine if the overall sentiment is positive or negative
+    - Respond ONLY in the exact format below with no additional text, explanation, or commentary:
+    
+    thought: [your analysis here]
+    sentiment: [positive or negative]
+    
+    Review to analyze:
+    {review}
     """
 
     response = client.chat.completions.create(
@@ -25,14 +40,23 @@ def analyze_sentiment(review):
     )
 
     content = response.choices[0].message.content
-    # TODO: Parse the response to extract thought and sentiment
+    
+    # Parse the response to extract thought and sentiment
     # The response should be in the format:
     # thought: [analysis]
     # sentiment: [positive/negative]
     result = {
-        "thought": "",  # TODO: Extract thought
-        "sentiment": ""  # TODO: Extract sentiment
+        "thought": "",
+        "sentiment": ""
     }
+    
+    # Split by lines and parse
+    for line in content.strip().split('\n'):
+        line = line.strip()
+        if line.startswith('thought:'):
+            result["thought"] = line.replace('thought:', '', 1).strip()
+        elif line.startswith('sentiment:'):
+            result["sentiment"] = line.replace('sentiment:', '', 1).strip()
     
     return result
 

@@ -16,6 +16,7 @@ orjson==3.10.18
 packaging==24.2
 pinecone==7.0.2
 pinecone-plugin-assistant==1.6.1
+python-dotenv==1.0.0
 pinecone-plugin-interface==0.0.7
 pip==24.0
 pydantic==2.11.5
