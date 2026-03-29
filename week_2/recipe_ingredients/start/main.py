@@ -4,17 +4,26 @@ from typing import List
 from pprint import pprint
 import os
 
-# TODO: Add a new Ingredients model that can be used in the Recipe model with the following properties:
-# - amount
-# - unit
-# - name
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+class Ingredient(BaseModel):
+    """
+    Represents a single ingredient in a recipe.
+    """
+    amount: float = Field(description="Quantity of the ingredient")
+    unit: str = Field(description="Unit of measurement (e.g., cups, tablespoons, grams)")
+    name: str = Field(description="Name of the ingredient")
+
 
 class Recipe(BaseModel):
     """
     Use this model when working with complete cooking recipes.
     """
     title: str = Field(description="Name of the recipe")
-    ingredients: List[str] = Field(description="List of ingredients needed for the recipe")
+    ingredients: List[Ingredient] = Field(description="List of ingredients needed for the recipe")
     instructions: List[str] = Field(description="Step-by-step instructions to prepare the recipe")
 
 def get_recipe_from_text(recipe_text: str) -> Recipe:
@@ -48,4 +57,4 @@ if __name__ == "__main__":
     
     # Print results
     pprint(recipe.ingredients[0])
-    # pprint(recipe) # to see the whole object
+    pprint(recipe) # to see the whole object
