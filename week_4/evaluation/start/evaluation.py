@@ -3,6 +3,11 @@ import os
 from openai import OpenAI
 from langsmith.evaluation import evaluate
 
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
 # Initialize the OpenAI client
 client = OpenAI()
 
@@ -42,10 +47,12 @@ def make_call_to_llm(input):
 def perform_eval(llm_result, dataset_item):
     try:
         # Parse the model's output
-        llm_output = json.loads(llm_result.outputs['output'])
+        llm_output_str = llm_result.outputs['output']
+        llm_output = json.loads(llm_output_str) if isinstance(llm_output_str, str) else llm_output_str
         
         # Parse the expected output
-        expected_output = json.loads(dataset_item.outputs['output'])
+        expected_output_data = dataset_item.outputs['output']
+        expected_output = json.loads(expected_output_data) if isinstance(expected_output_data, str) else expected_output_data
         
         # Extract score from response
         # For a simpler implementation, let's manually calculate the score
@@ -54,12 +61,16 @@ def perform_eval(llm_result, dataset_item):
         score = correct_keys / total_keys if total_keys > 0 else 0
         
         return {"score": score}
-    except json.JSONDecodeError:
-        # Handle the case where JSON parsing fails
+    except (json.JSONDecodeError, TypeError, KeyError):
+        # Handle the case where JSON parsing fails or keys are missing
         return {"score": 0.0}
 
 # Evaluate the target task
-# TODO: Implement the evaluate function to run the evaluation
-# See https://docs.smith.langchain.com/evaluation for reference and examples
-# This should evaluate make_call_to_llm against the dataset_name using perform_eval
-# and create an experiment with the prefix "news_extraction_homework"
+# Run the evaluation using the make_call_to_llm function against the dataset_name
+# using perform_eval as the evaluator and create an experiment with the prefix "news_extraction_homework"
+results = evaluate(
+    make_call_to_llm,
+    data=dataset_name,
+    evaluators=[perform_eval],
+    experiment_prefix="news_extraction_homework"
+)

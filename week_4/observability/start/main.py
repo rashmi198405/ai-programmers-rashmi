@@ -5,6 +5,12 @@ from pinecone import Pinecone
 from typing import List
 from langsmith import Client, traceable
 
+
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
 # Initialize OpenAI and Pinecone clients
 openai.api_key = os.environ.get("OPENAI_API_KEY")
 pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY"))
@@ -15,7 +21,7 @@ langsmith_project = "rag-observability"
 langsmith_client = Client(api_key=langsmith_api_key)
 
 # Constants
-INDEX_NAME = "test"
+INDEX_NAME = "shareholder-letters"
 EMBEDDING_MODEL = "text-embedding-3-small"
 CHAT_MODEL = "gpt-4o-mini-2024-07-18"
 
@@ -28,7 +34,7 @@ def load_documents():
     files = glob.glob(path)
     
     for file_path in files:
-        with open(file_path, 'r') as file:
+        with open(file_path, 'r', encoding='utf-8') as file:
             content = file.read()
             documents.append({"content": content, "metadata": {"source": file_path}})
     
@@ -95,6 +101,7 @@ def embed_documents(chunks, namespace):
         # Upsert to Pinecone
         index.upsert(vectors=vectors, namespace=namespace)
 
+@traceable(name="search_documents")
 def search_documents(query, namespace, top_k=5):
     """Search the vector store with the user query."""
     # Get query embedding
@@ -114,14 +121,13 @@ def search_documents(query, namespace, top_k=5):
     docs_with_scores = []
     for match in results["matches"]:
         # Load the document content based on the source file
-        with open(match["metadata"]["source"], 'r') as f:
+        with open(match["metadata"]["source"], 'r', encoding='utf-8') as f:
             content = f.read()
         docs_with_scores.append((content, match["score"]))
     
     return docs_with_scores
 
-# TODO: Add traceable decorator to track this function in LangSmith
-# Example: https://docs.smith.langchain.com/observability/how_to_guides/log_traces_to_project
+@traceable(name="ask_openai")
 def ask_openai(query, documents):
     """Ask OpenAI a question with context from the documents."""
     # Join all documents into a single context string
