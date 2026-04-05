@@ -2,6 +2,11 @@ from openai import OpenAI
 import faiss
 import numpy 
 
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
 # Example documents about movies
 texts = [
     "The Godfather is a classic mafia crime drama",
@@ -16,8 +21,12 @@ def get_embedding(text):
     # 2. Make an API call to generate embeddings using the text-embedding-3-small model
     # 3. Return the embedding vector from the response
     
-    # Placeholder for the actual implementation
-    return [0] * 1536  # Placeholder with the expected dimension
+    client = OpenAI()
+    response = client.embeddings.create(
+        model="text-embedding-3-small",
+        input=text
+    )
+    return response.data[0].embedding
 
 embeddings = []
 for text in texts:

@@ -4,12 +4,20 @@ import openai
 from pinecone import Pinecone
 from typing import List
 
+
+
+# Initialize OpenAI and Pinecone clients
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
 # Initialize OpenAI and Pinecone clients
 openai.api_key = os.environ.get("OPENAI_API_KEY")
 pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY"))
 
 # Constants
-INDEX_NAME = "YOUR INDEX HERE"
+INDEX_NAME = "shareholder-letters"
 EMBEDDING_MODEL = "text-embedding-3-small"
 CHAT_MODEL = "gpt-4o-mini-2024-07-18"
 
@@ -21,7 +29,7 @@ def load_documents():
     files = glob.glob(path)
     
     for file_path in files:
-        with open(file_path, 'r') as file:
+        with open(file_path, 'r', encoding='utf-8') as file:
             content = file.read()
             documents.append({"content": content, "metadata": {"source": file_path}})
     
@@ -76,10 +84,14 @@ def embed_documents(chunks, namespace):
         # Prepare data for Pinecone
         vectors = []
         for j, embedding in enumerate(embeddings):
+            # Include both source metadata and the chunk content
+            metadata = chunk_batch[j]["metadata"].copy()
+            metadata["content"] = chunk_batch[j]["content"]
+            
             vectors.append({
                 "id": f"chunk_{i+j}",
                 "values": embedding,
-                "metadata": chunk_batch[j]["metadata"]
+                "metadata": metadata
             })
         
         # Upsert to Pinecone
@@ -90,16 +102,24 @@ def search_documents(query, namespace, top_k=5):
     # Get query embedding
     query_embedding = get_embeddings([query])[0]
     
-    # TODO: Search Pinecone using the query_embedding
-    # Implement the search functionality using the Pinecone Index query method
-    # Documentation: https://sdk.pinecone.io/python/pinecone/grpc.html#GRPCIndex.query
-    # The query should:
-    # 1. Get a reference to the index
-    # 2. Call the query method with the appropriate parameters
-    # 3. Process the results to extract the documents
+    # Get Pinecone index
+    index = pc.Index(INDEX_NAME)
     
-    # Placeholder for the actual implementation
+    # Query the index for similar documents
+    results = index.query(
+        vector=query_embedding,
+        top_k=top_k,
+        namespace=namespace,
+        include_metadata=True
+    )
+    
+    # Process the results to extract documents and scores
     docs_with_scores = []
+    for match in results['matches']:
+        content = match['metadata'].get('content', '')
+        score = match['score']
+        docs_with_scores.append((content, score))
+    
     return docs_with_scores
 
 def ask_openai(query, documents):
@@ -126,9 +146,9 @@ def ask_openai(query, documents):
 
 if __name__ == "__main__":
     # Step 1: Load document embeddings into Pinecone - only run this the first time
-    # docs = load_documents()
-    # chunks = chunk_documents(docs)
-    # embed_documents(chunks, namespace="chunks")
+    docs = load_documents()
+    chunks = chunk_documents(docs)
+    embed_documents(chunks, namespace="chunks")
 
     # Step 2: Write a query
     user_query = "When did Berkshire Hathaway purchase it's first coke stock?" # Year: 1988
